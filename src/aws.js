@@ -26,6 +26,7 @@ function buildUserDataScript(githubRegistrationToken, label) {
       'curl -O -L https://github.com/actions/runner/releases/download/v2.313.0/actions-runner-linux-${RUNNER_ARCH}-2.313.0.tar.gz',
       'tar xzf ./actions-runner-linux-${RUNNER_ARCH}-2.313.0.tar.gz',
       'chown ubuntu:ubuntu /home/ubuntu/actions-runner',
+      'sudo usermod -aG docker ubuntu',
       `sudo -u ubuntu ./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label}`,
       'sudo -u ubuntu ./run.sh',
     ];
