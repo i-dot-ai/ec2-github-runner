@@ -42,13 +42,16 @@ async function startEc2Instance(label, githubRegistrationToken) {
     ...config.input.ec2VolumeSize && {
         BlockDeviceMappings: [
         {
-          DeviceName: "/dev/sda1", 
+          DeviceName: "/dev/sda1",
           Ebs: {
-            VolumeSize: config.input.ec2VolumeSize
+            VolumeSize: config.input.ec2VolumeSize,
+            DeleteOnTermination: true,
+            VolumeType: 'gp3',
+            Encrypted: true,
           }
         }
       ]
-    }, 
+    },
     ImageId: config.input.ec2ImageId,
     InstanceType: config.input.ec2InstanceType,
     MinCount: 1,
