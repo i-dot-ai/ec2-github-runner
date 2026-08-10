@@ -18,13 +18,19 @@
   },
   "dependencies": {
     "@actions/core": "^1.10.0",
-    "@actions/github": "^4.0.0",
+    "@actions/github": "^6.0.1",
     "aws-sdk": "^2.1354.0",
-    "lodash": "^4.17.21"
+    "lodash": "^4.18.1",
+    "uuid": "https://npm.aikido.io/97f0f5b2fc3054b55dd9/uuid@8.3.2-aikido.5"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.2",
     "dotenv": "^8.6.0",
     "eslint": "^7.32.0"
+  },
+  "overrides": {
+    "@actions/core": {
+      "uuid": "https://npm.aikido.io/97f0f5b2fc3054b55dd9/uuid@8.3.2-aikido.5"
+    }
   }
 }
