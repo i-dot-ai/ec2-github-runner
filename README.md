@@ -35,6 +35,12 @@ See [below](#example) the YAML code of the depicted workflow. <br><br>
 - [Self-hosted runner security with public repositories](#self-hosted-runner-security-with-public-repositories)
 - [License Summary](#license-summary)
 
+## i.AI platform usage
+
+This is a hardened fork of `machulav/ec2-github-runner` used inside the i.AI platform. In this estate the action is the on-demand half of two self-hosted runner systems. Jobs normally run on an always-on persistent fleet; the on-demand action runs only when no persistent runner is free, so it is the overflow path rather than the default. The [start-runner](https://github.com/i-dot-ai/i-dot-ai-core-github-actions/blob/main/.github/workflows/start-runner.yml) and [stop-runner](https://github.com/i-dot-ai/i-dot-ai-core-github-actions/blob/main/.github/workflows/stop-runner.yml) reusable workflows in `i-dot-ai-core-github-actions` drive it, and they supply its networking and identity from the shared `/github-runner-<environment>/` SSM parameters (subnet, security group, IAM role, EFS) that `i-ai-core-infrastructure` publishes.
+
+Because both systems share that configuration, they run in the same single subnet and availability zone. For the conceptual model, see [self-hosted GitHub runners](https://github.com/i-dot-ai/engineering-guidance/blob/main/explanation/github-runners.md). For how the on-demand and persistent systems differ (instance size, volume, lifecycle, and labels), see the authoritative comparison in [`modules/github/README.md`](https://github.com/i-dot-ai/i-ai-core-infrastructure/blob/main/modules/github/README.md).
+
 ## Use cases
 
 ### Access private resources in your VPC
