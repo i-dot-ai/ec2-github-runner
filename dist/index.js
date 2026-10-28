@@ -65547,7 +65547,7 @@ const core = __nccwpck_require__(37484);
 const config = __nccwpck_require__(1283);
 
 // User data scripts are run as the root user
-function buildUserDataScript(githubRegistrationToken, label) {
+function buildUserDataScript(githubRegistrationToken, label, runnerVersion) {
   if (config.input.runnerHomeDir) {
     // If runner home directory is specified, we expect the actions-runner software (and dependencies)
     // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
@@ -65567,20 +65567,20 @@ function buildUserDataScript(githubRegistrationToken, label) {
       `sudo -u ubuntu echo "${config.input.preRunnerScript}" > pre-runner-script.sh`,
       'source pre-runner-script.sh',
       'export RUNNER_ARCH="x64"',
-      'curl -O -L https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-${RUNNER_ARCH}-2.337.0.tar.gz',
-      'tar xzf ./actions-runner-linux-${RUNNER_ARCH}-2.337.0.tar.gz',
+      `curl -O -L https://github.com/actions/runner/releases/download/v${runnerVersion}/actions-runner-linux-\${RUNNER_ARCH}-${runnerVersion}.tar.gz`,
+      `tar xzf ./actions-runner-linux-\${RUNNER_ARCH}-${runnerVersion}.tar.gz`,
       'chown ubuntu:ubuntu /home/ubuntu/actions-runner',
       'sudo usermod -aG docker ubuntu',
-      `sudo -u ubuntu ./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --replace --unattended`,
+      `sudo -u ubuntu ./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --replace --unattended --disableupdate`,
       'sudo -u ubuntu ./run.sh',
     ];
   }
 }
 
-async function startEc2Instance(label, githubRegistrationToken) {
+async function startEc2Instance(label, githubRegistrationToken, runnerVersion) {
   const ec2 = new AWS.EC2();
 
-  const userData = buildUserDataScript(githubRegistrationToken, label);
+  const userData = buildUserDataScript(githubRegistrationToken, label, runnerVersion);
 
   const params = {
     ...config.input.ec2VolumeSize && {
@@ -65800,6 +65800,25 @@ async function removeRunner() {
   }
 }
 
+// Used only if the releases API call fails; keep it current when bumping.
+const RUNNER_VERSION_FALLBACK = '2.338.2';
+
+// Resolve the latest actions/runner release so the instance does not install a
+// stale pin and then go offline to self-update on first connect.
+async function getLatestRunnerVersion() {
+  const octokit = github.getOctokit(config.input.githubToken);
+
+  try {
+    const response = await octokit.request('GET /repos/{owner}/{repo}/releases/latest', { owner: 'actions', repo: 'runner' });
+    const version = response.data.tag_name.replace(/^v/, '');
+    core.info(`Latest GitHub Actions runner version is ${version}`);
+    return version;
+  } catch (error) {
+    core.warning(`Could not resolve the latest runner version, using ${RUNNER_VERSION_FALLBACK}: ${error.message}`);
+    return RUNNER_VERSION_FALLBACK;
+  }
+}
+
 async function waitForRunnerRegistered(label) {
   const timeoutMinutes = 5;
   const retryIntervalSeconds = 10;
@@ -65834,6 +65853,7 @@ async function waitForRunnerRegistered(label) {
 
 module.exports = {
   getRegistrationToken,
+  getLatestRunnerVersion,
   removeRunner,
   waitForRunnerRegistered,
 };
@@ -72385,7 +72405,8 @@ function setOutput(label, ec2InstanceId) {
 async function start() {
   const label = config.generateUniqueLabel();
   const githubRegistrationToken = await gh.getRegistrationToken();
-  const ec2InstanceId = await aws.startEc2Instance(label, githubRegistrationToken);
+  const runnerVersion = await gh.getLatestRunnerVersion();
+  const ec2InstanceId = await aws.startEc2Instance(label, githubRegistrationToken, runnerVersion);
   setOutput(label, ec2InstanceId);
   await aws.waitForInstanceRunning(ec2InstanceId);
   await gh.waitForRunnerRegistered(label);
