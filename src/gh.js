@@ -51,6 +51,25 @@ async function removeRunner() {
   }
 }
 
+// Used only if the releases API call fails; keep it current when bumping.
+const RUNNER_VERSION_FALLBACK = '2.338.2';
+
+// Resolve the latest actions/runner release so the instance does not install a
+// stale pin and then go offline to self-update on first connect.
+async function getLatestRunnerVersion() {
+  const octokit = github.getOctokit(config.input.githubToken);
+
+  try {
+    const response = await octokit.request('GET /repos/{owner}/{repo}/releases/latest', { owner: 'actions', repo: 'runner' });
+    const version = response.data.tag_name.replace(/^v/, '');
+    core.info(`Latest GitHub Actions runner version is ${version}`);
+    return version;
+  } catch (error) {
+    core.warning(`Could not resolve the latest runner version, using ${RUNNER_VERSION_FALLBACK}: ${error.message}`);
+    return RUNNER_VERSION_FALLBACK;
+  }
+}
+
 async function waitForRunnerRegistered(label) {
   const timeoutMinutes = 5;
   const retryIntervalSeconds = 10;
@@ -85,6 +104,7 @@ async function waitForRunnerRegistered(label) {
 
 module.exports = {
   getRegistrationToken,
+  getLatestRunnerVersion,
   removeRunner,
   waitForRunnerRegistered,
 };
