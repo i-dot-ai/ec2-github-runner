@@ -41,6 +41,8 @@ This is a hardened fork of `machulav/ec2-github-runner` used inside the i.AI pla
 
 Because both systems share that configuration, they run in the same single subnet and availability zone. For the conceptual model, see [self-hosted GitHub runners](https://github.com/i-dot-ai/engineering-guidance/blob/main/explanation/github-runners.md). For how the on-demand and persistent systems differ (instance size, volume, lifecycle, and labels), see the authoritative comparison in [`modules/github/README.md`](https://github.com/i-dot-ai/i-ai-core-infrastructure/blob/main/modules/github/README.md).
 
+At launch the action asks GitHub for the current [`actions/runner`](https://github.com/actions/runner/releases) release and installs that version, so a new instance does not download an old runner and then go offline to self-update before its first job. Because every instance starts on the current release, the runner is started with `--disableupdate`. If the releases API call fails the action uses the fallback version pinned in `src/gh.js`. The runner is not registered with GitHub's `--ephemeral` flag, which limits a runner to a single job: several platform workflows run two or three jobs on the same on-demand instance.
+
 ## Use cases
 
 ### Access private resources in your VPC

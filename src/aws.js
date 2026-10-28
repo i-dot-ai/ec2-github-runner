@@ -3,7 +3,7 @@ const core = require('@actions/core');
 const config = require('./config');
 
 // User data scripts are run as the root user
-function buildUserDataScript(githubRegistrationToken, label) {
+function buildUserDataScript(githubRegistrationToken, label, runnerVersion) {
   if (config.input.runnerHomeDir) {
     // If runner home directory is specified, we expect the actions-runner software (and dependencies)
     // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
@@ -23,20 +23,20 @@ function buildUserDataScript(githubRegistrationToken, label) {
       `sudo -u ubuntu echo "${config.input.preRunnerScript}" > pre-runner-script.sh`,
       'source pre-runner-script.sh',
       'export RUNNER_ARCH="x64"',
-      'curl -O -L https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-${RUNNER_ARCH}-2.337.0.tar.gz',
-      'tar xzf ./actions-runner-linux-${RUNNER_ARCH}-2.337.0.tar.gz',
+      `curl -O -L https://github.com/actions/runner/releases/download/v${runnerVersion}/actions-runner-linux-\${RUNNER_ARCH}-${runnerVersion}.tar.gz`,
+      `tar xzf ./actions-runner-linux-\${RUNNER_ARCH}-${runnerVersion}.tar.gz`,
       'chown ubuntu:ubuntu /home/ubuntu/actions-runner',
       'sudo usermod -aG docker ubuntu',
-      `sudo -u ubuntu ./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --replace --unattended`,
+      `sudo -u ubuntu ./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --replace --unattended --disableupdate`,
       'sudo -u ubuntu ./run.sh',
     ];
   }
 }
 
-async function startEc2Instance(label, githubRegistrationToken) {
+async function startEc2Instance(label, githubRegistrationToken, runnerVersion) {
   const ec2 = new AWS.EC2();
 
-  const userData = buildUserDataScript(githubRegistrationToken, label);
+  const userData = buildUserDataScript(githubRegistrationToken, label, runnerVersion);
 
   const params = {
     ...config.input.ec2VolumeSize && {
